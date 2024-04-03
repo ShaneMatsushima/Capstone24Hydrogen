@@ -6,7 +6,6 @@
 //CAN stuff
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 static CAN_message_t msg1;
-static CAN_message_t msg2;
 
 //Pin definitions:
 #define MAX485_RE 7  //Transmitter enable pin
@@ -22,17 +21,13 @@ struct RegisterPair {
 };
 
 //Modbus Settings:
-uint32_t modbusBaudRate = 38400;
-uint8_t slaveID = 1;  //Modbus slave ID
+uint32_t modbusBaudRate = 19200; 
+uint8_t slaveID = 101;  //Modbus slave ID
 
 //Registers and data type. {Register address, datatype, multiplier} where the address is in hex and the datatype is 1 for floating point or 0 for integer and the multiplier is default 1.0 or whatever you need it to be
 RegisterPair Registers[] = {
-  { 0x001A, 1, 1.0 }, //Flowrate  l/min 15.29 to 4247.5
-  { 0x001B, 1, 1.0 }, //Flowrate 0.54 to 150 SCFM
-  { 0x0028, 1, 1.0 }, //Pressure 0 to 16 bar
-  { 0x0029, 1, 1.0 }, //Pressure 0 to 250 psi
-  { 0x0048, 1, 1.0 }, //Temp 0 to 60 C
-  { 0x0049, 1, 1.0 }  //Temp 32 to 140 F
+  {0x0032, 1, 1.0}, //Flow Rate
+  {0x0033, 1, 1.0}, //Totalizer?? could be total mass?
 };
 //Tells us how many total registers there are in array
 const int num_registers = sizeof(Registers) / sizeof(Registers[0]);
@@ -47,9 +42,6 @@ typedef union {
 //Holds the response data for each register
 float RegisterValues[num_registers];
 
-
-long LastGPSchars = 10000;
-long CurrGPSchars = 10000;
 int CharsCycle = 0;
 long Sats_Number = 0;
 long LoopTimingLast = 0;
@@ -73,17 +65,31 @@ void setup() {
 }
 
 void loop() {
-  float TempF = (RegisterValues[5]);
-  float PressPSI = (RegisterValues[3]);
-  Serial.print("Temp DegF: ");
-  Serial.print(TempF);
-  Serial.print(" Press PSI: ");
-  Serial.print(PressPSI);
+  float Flow = (RegisterValues[0]);
+  Serial.print("Flow SCFM: ");
+  Serial.print(Flow);
+
+  float Totalizer = (RegisterValues[1]);
+  Serial.print("Totalizer: ");
+  Serial.print(Totalizer);
+
   Serial.print(" Loop Time: ");
   Serial.println(millis() - LoopTimingLast); 
   LoopTimingLast = millis();
-   
-   // Latitude conversion to hex for CAN-BUS message 
+
+  // Flow converstion to hex for CAN-BUS message
+  long  FlowHex = ((Flow+150)*10000000);
+  long a = FlowHex & 0xFF;
+  long b = FlowHex >> 8 & 0xFF;
+  long c = FlowHex >> 16;
+  long d = FlowHex >> 24;
+
+  long TotalizerHex = ((TotalizerHex+1000)*10);
+  long e = TotalizerHex & 0xFF;
+  long f = TotalizerHex >> 8 & 0xFF;
+
+  /*  
+  // Latitude conversion to hex for CAN-BUS message 
   float Lat = 45.4003;
   long latitude = ((Lat+150)*10000000);
   long a = latitude & 0xFF;
@@ -112,6 +118,7 @@ void loop() {
   long d2 = Speed_mph >> 8 & 0xFF;
   // number of satellites conversion to hex for CAN-BUS message
 
+  */  
 
     //building the CAN message #1
     msg1.id = 0x09A; 
@@ -122,22 +129,9 @@ void loop() {
     msg1.buf[3] = d;
     msg1.buf[4] = e;
     msg1.buf[5] = f;
-    msg1.buf[6] = g;
-    msg1.buf[7] = h;
+    msg1.buf[6] = 0xFF;
+    msg1.buf[7] = 0xFF;
     can1.write(msg1); //sending the message
-
-    //building the CAN message #2
-    msg2.id = 0x09B; 
-    msg2.len = 8; 
-    msg2.buf[0] = a2;
-    msg2.buf[1] = b2;
-    msg2.buf[2] = c2;
-    msg2.buf[3] = d2;
-    msg2.buf[4] = 0xFF;
-    msg2.buf[5] = 0xFF;
-    msg2.buf[6] = 0xFF;
-    msg2.buf[7] = 0xFF;
-    can1.write(msg2); //sending the message
 
   threads.delay(500);
 }
