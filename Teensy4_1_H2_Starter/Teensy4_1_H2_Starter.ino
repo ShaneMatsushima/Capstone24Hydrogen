@@ -84,7 +84,7 @@ void loop() {
   long c = FlowHex >> 16;
   long d = FlowHex >> 24;
 
-  long TotalizerHex = ((TotalizerHex+1000)*10);
+  long TotalizerHex = ((Totalizer+1000)*10);
   long e = TotalizerHex & 0xFF;
   long f = TotalizerHex >> 8 & 0xFF;
 
@@ -199,47 +199,6 @@ void flashLEDs() {
       digitalWriteFast(SigHIGH, HIGH);
    } 
     
-   CurrGPSchars = LastGPSchars;
-   if (LastGPSchars == CurrGPSchars) 
-    {
-      CharsCycle = CharsCycle + 1;
-    }
-    else
-    {
-      CharsCycle = 0;
-    }
-    
-    if (LastGPSchars == CurrGPSchars && CharsCycle > 3) 
-    {
-      CharsCycle = 0;
-      digitalWriteFast(PowerON, HIGH);
-      digitalWriteFast(SigLOW, HIGH);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, LOW);
-      digitalWriteFast(SigLOW, LOW);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, HIGH);
-      digitalWriteFast(SigLOW, HIGH);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, LOW);
-      digitalWriteFast(SigLOW, LOW);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, HIGH);
-      digitalWriteFast(SigLOW, HIGH);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, LOW);
-      digitalWriteFast(SigLOW, LOW);
-      digitalWriteFast(SigHIGH, LOW);
-      threads.delay(50);
-      digitalWriteFast(PowerON, HIGH);
-      digitalWriteFast(SigLOW, HIGH);
-      digitalWriteFast(SigHIGH, LOW);
-    }
     else if  (Sats_Number  == 0)   {
       digitalWriteFast(PowerON, HIGH);
       digitalWriteFast(SigLOW, LOW);
