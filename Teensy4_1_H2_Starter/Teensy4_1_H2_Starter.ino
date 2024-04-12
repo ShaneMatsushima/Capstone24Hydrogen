@@ -28,6 +28,7 @@ uint8_t slaveID = 101;  //Modbus slave ID
 RegisterPair Registers[] = {
   {0x0032, 1, 1.0}, //Flow Rate
   {0x0033, 1, 1.0}, //Totalizer?? could be total mass?
+  {0x0004, 1, 1.0}, // temperature
 };
 //Tells us how many total registers there are in array
 const int num_registers = sizeof(Registers) / sizeof(Registers[0]);
@@ -69,8 +70,12 @@ void loop() {
   Serial.print("Flow SCFM: ");
   Serial.print(Flow);
 
+  float Temp = (RegisterValues[2]);
+  Serial.print(" Temp: ");
+  Serial.print(Temp);
+
   float Totalizer = (RegisterValues[1]);
-  Serial.print("Totalizer: ");
+  Serial.print(" Totalizer: ");
   Serial.print(Totalizer);
 
   Serial.print(" Loop Time: ");
