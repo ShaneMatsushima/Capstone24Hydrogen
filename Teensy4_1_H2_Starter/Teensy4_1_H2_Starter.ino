@@ -132,14 +132,14 @@ void loop() {
     //building the CAN message #1
     msg1.id = 0x09A; 
     msg1.len = 8; 
-    msg1.buf[0] = a;
+    msg1.buf[0] = a; //  start of flow
     msg1.buf[1] = b;
     msg1.buf[2] = c;
-    msg1.buf[3] = d;
-    msg1.buf[4] = e;
-    msg1.buf[5] = f;
-    msg1.buf[6] = g;
-    msg1.buf[7] = h;
+    msg1.buf[3] = d; //  end of flow
+    msg1.buf[4] = e; //  start of totalizer
+    msg1.buf[5] = f; //  end of totalizer
+    msg1.buf[6] = g; //  start of temp
+    msg1.buf[7] = h; //  end of temp
     can1.write(msg1); //sending the message
 
   threads.delay(500);
