@@ -93,6 +93,10 @@ void loop() {
   long e = TotalizerHex & 0xFF;
   long f = TotalizerHex >> 8 & 0xFF;
 
+  long TemperatureHex = (Temp*100);
+  long g = TemperatureHex & 0xFF;
+  long h = TemperatureHex >> 8 & 0xFF;
+
   /*  
   // Latitude conversion to hex for CAN-BUS message 
   float Lat = 45.4003;
@@ -134,8 +138,8 @@ void loop() {
     msg1.buf[3] = d;
     msg1.buf[4] = e;
     msg1.buf[5] = f;
-    msg1.buf[6] = 0xFF;
-    msg1.buf[7] = 0xFF;
+    msg1.buf[6] = g;
+    msg1.buf[7] = h;
     can1.write(msg1); //sending the message
 
   threads.delay(500);
