@@ -250,16 +250,40 @@ void switchFlow(){
     threads.delay(800);
     float lowFlow;
     float highFlow;
+
+    /**
+     * cutoff @ 7.5kg/h
+     * between should average (maybe average overall and find error based on flow meters and select based on lower error)
+    */
     if (Serial.available()){
       // read data of other flow meter
       // using serial coms to transmit data between arduinos
       lowFlow = Flow;
       highFlow = (float)Serial.read();
     }
-    if (lowFlow >= lowFlowMin && lowFlow <= lowFlowMax)
-      // read low flow sensor
-    else if (highFlow > lowFlowMax && highFlow <= highFlowMax)
-      // read high flow sensor
+    float avg_flow = lowFlow + highFlow / 2;
+
+    float low_diff = abs(avg_flow - lowFlow);
+    float high_diff = abs(avg_flow - highFlow);
+
+    if(lowFlow <= 7.5 && highFlow <= 7.5)
+    {
+      //use low flow meter
+      Serial.println("Flow Meter Low Selected");
+    } else if(lowFlow > 7.5 && highFlow > 7.5)
+    {
+      if(low_diff < high_diff)
+        // use low flow meter
+        Serial.print("Flow Meter Low Selected");
+      else
+        //use high flow meter
+        Serial.println("Flow Meter High Selected");
+    } else if(highFlow >= 9)
+    {
+      //use high flow meter
+      Serial.println("Flow Meter High Selected");
+    }
+
     else
       Serial.println("Both flow meters out of range...");
 
