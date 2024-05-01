@@ -3,6 +3,8 @@
 #include <ModbusMaster.h>
 #include "TeensyThreads.h"
 
+//TODO: create reference to make sure low and high are uploaded correctly (make another sketch for low / high based on this sketch)
+
 //CAN stuff
 FlexCAN_T4<CAN1, RX_SIZE_256, TX_SIZE_16> can1;
 static CAN_message_t msg1;
@@ -21,14 +23,12 @@ struct RegisterPair {
 };
 
 //Modbus Settings:
-uint32_t modbusBaudRate = 19200; 
-uint8_t slaveID = 101;  //Modbus slave ID
+uint32_t modbusBaudRate = 115200; 
+uint8_t slaveID = 101;  //Modbus slave ID (101 high, 127 low)
 
 //Registers and data type. {Register address, datatype, multiplier} where the address is in hex and the datatype is 1 for floating point or 0 for integer and the multiplier is default 1.0 or whatever you need it to be
 RegisterPair Registers[] = {
-  {0x0032, 1, 1.0}, //Flow Rate
-  {0x0033, 1, 1.0}, //Totalizer?? could be total mass?
-  {0x0004, 1, 1.0}, // temperature
+  {0x32, 1, 1.0} //Flow Rate
 };
 //Tells us how many total registers there are in array
 const int num_registers = sizeof(Registers) / sizeof(Registers[0]);
@@ -47,12 +47,25 @@ int CharsCycle = 0;
 long Sats_Number = 0;
 long LoopTimingLast = 0;
 
+float Flow;
+ // float Temp;
+ // float Totalizer;
+float totalFlow = 0;
+
+const float lowFlowMin = 0;
+const float lowFlowMax = 9;
+const float highFlowMin = 0;
+const float highFlowMax = 24;
+
+enum use_status {FLOW_HIGH, FLOW_LOW, FLOW_NONE};
+enum use_status use_flag = FLOW_NONE;
+
 void setup() {
   pinMode(MAX485_RE, OUTPUT); 
   pinMode(PowerON, OUTPUT); 
   pinMode(SigLOW, OUTPUT); 
   pinMode(SigHIGH, OUTPUT); 
-  Serial.begin(112500);
+  Serial.begin(9600);
 
   can1.begin();
   can1.setBaudRate(500000);
@@ -63,84 +76,91 @@ void setup() {
   
   threads.addThread(modthread); 
   threads.addThread(flashLEDs);
+  threads.addThread(switchFlow);
 }
 
 void loop() {
-  float Flow = (RegisterValues[0]);
-  Serial.print("Flow SCFM: ");
-  Serial.print(Flow);
+  Flow = (RegisterValues[0]);
+  Serial.println(Flow);
+  // Temp = (RegisterValues[2]);
+  // Serial.print(" Temp: ");
+  // Serial.print(Temp);
 
-  float Temp = (RegisterValues[2]);
-  Serial.print(" Temp: ");
-  Serial.print(Temp);
+  // Totalizer = (RegisterValues[1]);
+  // Serial.print(" Totalizer: ");
+  // Serial.print(Totalizer);
 
-  float Totalizer = (RegisterValues[1]);
-  Serial.print(" Totalizer: ");
-  Serial.print(Totalizer);
-
-  Serial.print(" Loop Time: ");
-  Serial.println(millis() - LoopTimingLast); 
+  uint32_t time = millis() - LoopTimingLast;
+  time = time / 1000;
+  totalFlow = totalFlow + (time * Flow);
   LoopTimingLast = millis();
 
-  // Flow converstion to hex for CAN-BUS message
-  long  FlowHex = ((Flow+150)*10000000);
-  long a = FlowHex & 0xFF;
-  long b = FlowHex >> 8 & 0xFF;
-  long c = FlowHex >> 16;
-  long d = FlowHex >> 24;
 
-  long TotalizerHex = ((Totalizer+1000)*10);
-  long e = TotalizerHex & 0xFF;
-  long f = TotalizerHex >> 8 & 0xFF;
+  if(use_flag == FLOW_LOW) //if flagged to use
+  {
 
-  long TemperatureHex = (Temp*100);
-  long g = TemperatureHex & 0xFF;
-  long h = TemperatureHex >> 8 & 0xFF;
+  }
 
-  /*  
-  // Latitude conversion to hex for CAN-BUS message 
-  float Lat = 45.4003;
-  long latitude = ((Lat+150)*10000000);
-  long a = latitude & 0xFF;
-  long b = latitude >> 8 & 0xFF;
-  long c = latitude >> 16;
-  long d = latitude >> 24;
+    // Flow converstion to hex for CAN-BUS message
+    long  FlowHex = ((Flow+150)*10000000);
+    long a = FlowHex & 0xFF;
+    long b = FlowHex >> 8 & 0xFF;
+    long c = FlowHex >> 16;
+    long d = FlowHex >> 24;
+
+    // long TotalizerHex = ((Totalizer+1000)*10);
+    // long e = TotalizerHex & 0xFF;
+    // long f = TotalizerHex >> 8 & 0xFF;
+
+    // long TemperatureHex = (Temp*100);
+    // long g = TemperatureHex & 0xFF;
+    // long h = TemperatureHex >> 8 & 0xFF;
+
+    /*  
+    // Latitude conversion to hex for CAN-BUS message 
+    float Lat = 45.4003;
+    long latitude = ((Lat+150)*10000000);
+    long a = latitude & 0xFF;
+    long b = latitude >> 8 & 0xFF;
+    long c = latitude >> 16;
+    long d = latitude >> 24;
+    
+    // Longitude conversion to hex for CAN-BUS message
+    float Lon = -122.6944;
+    long longitude = ((Lon+150)*10000000);
+    long e = longitude & 0xFF;
+    long f = longitude >> 8 & 0xFF;
+    long g = longitude >> 16;
+    long h = longitude >> 24; 
+    
+    // Altitude conversion to hex for CAN-BUS message
+    float Alt = 130;
+    long Altitude = ((130+1000)*10);
+    long a2 = Altitude & 0xFF;
+    long b2 = Altitude >> 8 & 0xFF;
+    
+    // Speed conversion to hex for CAN-BUS message  
+    float Speed = 23.55;
+    long Speed_mph = (Speed*100);
+    long c2 = Speed_mph & 0xFF;
+    long d2 = Speed_mph >> 8 & 0xFF;
+    // number of satellites conversion to hex for CAN-BUS message
+
+    */  
+
+      //building the CAN message #1
+      msg1.id = 0x09A; 
+      msg1.len = 8; 
+      msg1.buf[0] = a; //  start of flow
+      msg1.buf[1] = b;
+      msg1.buf[2] = c;
+      msg1.buf[3] = d; //  end of flow
+      msg1.buf[4] = 0xFF; //  start of totalizer
+      msg1.buf[5] = 0xFF; //  end of totalizer
+      msg1.buf[6] = 0xFF; //  start of temp
+      msg1.buf[7] = 0xFF; //  end of temp
+      can1.write(msg1); //sending the message
   
-  // Longitude conversion to hex for CAN-BUS message
-  float Lon = -122.6944;
-  long longitude = ((Lon+150)*10000000);
-  long e = longitude & 0xFF;
-  long f = longitude >> 8 & 0xFF;
-  long g = longitude >> 16;
-  long h = longitude >> 24; 
-  
-  // Altitude conversion to hex for CAN-BUS message
-  float Alt = 130;
-  long Altitude = ((130+1000)*10);
-  long a2 = Altitude & 0xFF;
-  long b2 = Altitude >> 8 & 0xFF;
-   
-  // Speed conversion to hex for CAN-BUS message  
-  float Speed = 23.55;
-  long Speed_mph = (Speed*100);
-  long c2 = Speed_mph & 0xFF;
-  long d2 = Speed_mph >> 8 & 0xFF;
-  // number of satellites conversion to hex for CAN-BUS message
-
-  */  
-
-    //building the CAN message #1
-    msg1.id = 0x09A; 
-    msg1.len = 8; 
-    msg1.buf[0] = a; //  start of flow
-    msg1.buf[1] = b;
-    msg1.buf[2] = c;
-    msg1.buf[3] = d; //  end of flow
-    msg1.buf[4] = e; //  start of totalizer
-    msg1.buf[5] = f; //  end of totalizer
-    msg1.buf[6] = g; //  start of temp
-    msg1.buf[7] = h; //  end of temp
-    can1.write(msg1); //sending the message
 
   threads.delay(500);
 }
@@ -148,9 +168,9 @@ void loop() {
 void modthread() {
 while(1) {
   threads.delay(200);
-    uint8_t result;
+    uint16_t result;
   for (int i = 0; i < num_registers; i++) {
-    result = node.readHoldingRegisters(Registers[i].address, 2);
+    result = node.readHoldingRegisters(Registers[i].address, 2*2);
     if (result == node.ku8MBSuccess) {
       RegisterData data;
 
@@ -226,4 +246,48 @@ void flashLEDs() {
       digitalWriteFast(SigHIGH, LOW);
     } 
 }
+}
+
+void switchFlow(){
+  while(1){
+    threads.delay(800);
+    float lowFlow;
+    float highFlow;
+
+    /**
+     * cutoff @ 7.5kg/h
+     * between should average (maybe average overall and find error based on flow meters and select based on lower error)
+    */
+    if (Serial.available()){
+      // read data of other flow meter
+      // using serial coms to transmit data between arduinos
+      lowFlow = Flow;
+      highFlow = (float)Serial.read();
+    }
+    float avg_flow = lowFlow + highFlow / 2;
+
+    float low_diff = abs(avg_flow - lowFlow);
+    float high_diff = abs(avg_flow - highFlow);
+
+    if(lowFlow <= 7.5 && highFlow <= 7.5)
+    {
+      //use low flow meter
+      use_flag = FLOW_LOW;
+    } else if(lowFlow > 7.5 && highFlow > 7.5)
+    {
+      if(low_diff < high_diff)
+        // use low flow meter
+        use_flag = FLOW_LOW;
+      else
+        //use high flow meter
+        use_flag = FLOW_HIGH;
+    } else if(highFlow >= 9)
+    {
+      //use high flow meter
+      use_flag = FLOW_LOW;
+    }
+
+    else
+      use_flag = FLOW_NONE;
+  }
 }
