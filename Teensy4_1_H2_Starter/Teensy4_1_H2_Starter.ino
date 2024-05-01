@@ -23,8 +23,8 @@ struct RegisterPair {
 };
 
 //Modbus Settings:
-uint32_t modbusBaudRate = 19200; 
-uint8_t slaveID = 101;  //Modbus slave ID
+uint32_t modbusBaudRate = 115200; 
+uint8_t slaveID = 101;  //Modbus slave ID (101 high, 127 low)
 
 //Registers and data type. {Register address, datatype, multiplier} where the address is in hex and the datatype is 1 for floating point or 0 for integer and the multiplier is default 1.0 or whatever you need it to be
 RegisterPair Registers[] = {
@@ -47,24 +47,25 @@ int CharsCycle = 0;
 long Sats_Number = 0;
 long LoopTimingLast = 0;
 
-float Flow = 0;
-float Temp = 0;
-float Totalizer = 0;
+float Flow;
+ // float Temp;
+ // float Totalizer;
+float totalFlow = 0;
 
 const float lowFlowMin = 0;
 const float lowFlowMax = 9;
 const float highFlowMin = 0;
 const float highFlowMax = 24;
 
-enum use_status {FLOW_START, FLOW_STOP};
-enum use_status use_flag = FLOW_START;
+enum use_status {FLOW_HIGH, FLOW_LOW, FLOW_NONE};
+enum use_status use_flag = FLOW_NONE;
 
 void setup() {
   pinMode(MAX485_RE, OUTPUT); 
   pinMode(PowerON, OUTPUT); 
   pinMode(SigLOW, OUTPUT); 
   pinMode(SigHIGH, OUTPUT); 
-  Serial.begin(112500);
+  Serial.begin(9600);
 
   can1.begin();
   can1.setBaudRate(500000);
@@ -80,9 +81,7 @@ void setup() {
 
 void loop() {
   Flow = (RegisterValues[0]);
-  Serial.print("Flow SCFM: ");
-  Serial.print(Flow);
-
+  Serial.println(Flow);
   // Temp = (RegisterValues[2]);
   // Serial.print(" Temp: ");
   // Serial.print(Temp);
@@ -91,12 +90,16 @@ void loop() {
   // Serial.print(" Totalizer: ");
   // Serial.print(Totalizer);
 
-  Serial.print(" Loop Time: ");
-  Serial.println(millis() - LoopTimingLast); 
+  uint32_t time = millis() - LoopTimingLast;
+  time = time / 1000;
+  totalFlow = totalFlow + (time * Flow);
   LoopTimingLast = millis();
 
-  if(use_flag == FLOW_START) //if flagged to use
+
+  if(use_flag == FLOW_LOW) //if flagged to use
   {
+
+  }
 
     // Flow converstion to hex for CAN-BUS message
     long  FlowHex = ((Flow+150)*10000000);
@@ -157,7 +160,7 @@ void loop() {
       msg1.buf[6] = 0xFF; //  start of temp
       msg1.buf[7] = 0xFF; //  end of temp
       can1.write(msg1); //sending the message
-  }
+  
 
   threads.delay(500);
 }
@@ -269,23 +272,22 @@ void switchFlow(){
     if(lowFlow <= 7.5 && highFlow <= 7.5)
     {
       //use low flow meter
-      Serial.println("Flow Meter Low Selected");
+      use_flag = FLOW_LOW;
     } else if(lowFlow > 7.5 && highFlow > 7.5)
     {
       if(low_diff < high_diff)
         // use low flow meter
-        Serial.print("Flow Meter Low Selected");
+        use_flag = FLOW_LOW;
       else
         //use high flow meter
-        Serial.println("Flow Meter High Selected");
+        use_flag = FLOW_HIGH;
     } else if(highFlow >= 9)
     {
       //use high flow meter
-      Serial.println("Flow Meter High Selected");
+      use_flag = FLOW_LOW;
     }
 
     else
-      Serial.println("Both flow meters out of range...");
-
+      use_flag = FLOW_NONE;
   }
 }

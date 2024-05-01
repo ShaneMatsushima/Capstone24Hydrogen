@@ -2,7 +2,7 @@
 #include <ArduinoModbus.h>
 
 
-#define MOD_BAUD 19200
+#define MOD_BAUD 115200
 
 //NOTE: Use Coolterm to log serial to txt for testing
 
@@ -14,6 +14,7 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
+  if(!ModBusRTUClient.begin)
   //send reading request 
   if (!ModbusRTUClient.requestFrom(0x65, 0x03, 0x32, 0x4)){
     Serial.println("Failed to read flow");
